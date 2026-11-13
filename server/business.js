@@ -160,7 +160,17 @@ business.get('/attendance/me', learner, async (req, res) => {
 })
 business.get('/attendance-tasks/:id/records', teacher, async (req, res) => {
   await taskForTeacher(req, req.params.id)
-  res.json({ items: await db.all('SELECT r.*,s.name,s.student_no FROM attendance_records r JOIN students s ON s.id=r.student_id WHERE r.task_id=? ORDER BY r.id', [id(req.params.id)]) })
+  const taskId = id(req.params.id)
+  const items = await db.all(`SELECT r.id,r.task_id,s.id AS student_id,s.name,s.student_no,
+    COALESCE(r.status,'unrecorded') AS status,r.source,r.checked_at,r.similarity
+    FROM students s LEFT JOIN attendance_records r ON r.student_id=s.id AND r.task_id=?
+    WHERE r.id IS NOT NULL OR EXISTS (SELECT 1 FROM enrollments e
+      JOIN attendance_tasks t ON t.teaching_class_id=e.teaching_class_id
+      WHERE t.id=? AND t.status<>'ended' AND e.student_id=s.id AND e.status='active')
+    ORDER BY s.student_no,s.id`, [taskId, taskId])
+  const counts = {}
+  for (const row of items) { row.task_id = taskId; counts[row.status] = (counts[row.status] || 0) + 1 }
+  res.json({ items, total: items.length, counts })
 })
 business.patch('/attendance-records/:id/review', teacher, async (req, res) => {
   const after = choice(req.body.status, statuses), reason = string(req.body.reason, '复核原因', 500)

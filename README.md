@@ -234,3 +234,7 @@ npm run build
 验证按 `npm run test:unit` → `npm run test:integration` → `npm run test:e2e` → `npm run test:regression` 执行。浏览器测试默认使用本机 Chrome，并通过 HTTP 测试替身验证裁剪、提交、审核和删除流程。连接自行部署的 CompreFace 1.2.0 Detection 服务后，使用 `npm run test:e2e:real` 验收真实识别，并在执行后重跑回归。
 
 真实验收在服务端 `.env.test` 设置 `COMPREFACE_URL`、`COMPREFACE_DETECTION_API_KEY` 和 `AVATAR_E2E_FIXTURES`。测试目录放入 `face.jpg`、`cat.jpg`、`dog.jpg`、`cartoon.jpg`、`landscape.jpg`、`side.jpg`、`multiple.jpg`，确保居中裁剪后仍能覆盖预期场景。人像样本应使用有权用于测试的照片。`.env.test` 和测试照片应保存在本地，不进入 Git。检测请求启用 `face_plugins=pose`，未返回有效姿态数据时拒绝提交。
+
+## 安卓人脸签到与教师实时名单
+
+教师可发起考勤，在“考勤记录 → 记录 / 复核”查看全班已签到、未签到、迟到、待复核、缺勤和请假名单；支持搜索、筛选和每 5 秒刷新。后端仅允许安卓会话提交签到，使用管理员审核通过的头像自动建立识别资料，不接受另一张登记照片作为比对基准。详见 [安卓联调说明](docs/ANDROID-ATTENDANCE.md)。

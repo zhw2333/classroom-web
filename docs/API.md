@@ -85,9 +85,9 @@ schedule 字段为 `{date,start,end,location,repeat,interval?,weekdays?,until?}`
 | PATCH | `/attendance-tasks/{id}` | 对应教师：`{status:"paused"或"active"}`；已结束/过期不能重开 |
 | POST | `/attendance-tasks/{id}/end` | 对应教师：结束，尚无记录的有效成员补记 absent；重复结束不重复插入 |
 | GET | `/attendance-tasks/available` | 学生：有效选课、未归档班级、当前开放时间内的任务 |
-| POST | `/attendance-tasks/{id}/check-in` | 学生：multipart 图片；先校验身份、选课、时段和重复记录，再调用识别；落库前再检查 |
+| POST | `/attendance-tasks/{id}/check-in` | 安卓学生会话：multipart 现场图片；以审核通过头像为识别基准；先校验身份、选课、时段和重复记录，再调用识别；落库前再检查 |
 | GET | `/attendance/me` | 学生本人记录 |
-| GET | `/attendance-tasks/{id}/records` | 对应教师 |
+| GET | `/attendance-tasks/{id}/records` | 对应教师；完整名单含 unrecorded、total、counts |
 | POST | `/attendance-tasks/{id}/manual` | 对应教师：`{student_id,status?,reason}`，非人脸替代流程，status 默认 manual；已有记录则使用 review |
 | PATCH | `/attendance-records/{id}/review` | 对应教师：`{status,reason}`，事务写入修改前后状态、操作者和原因，再更新结果 |
 | GET | `/attendance-records/{id}/reviews` | 对应教师：完整复核轨迹 |
@@ -103,7 +103,7 @@ schedule 字段为 `{date,start,end,location,repeat,interval?,weekdays?,until?}`
 | 方法 | 路径 | 学生本人请求 |
 |---|---|---|
 | POST | `/faces/consent` | `{policy_version,decision:"agree"或"withdraw"}`；记录独立决定，撤回立即禁用资料并尝试删除远端样本 |
-| POST | `/faces/register` | multipart 图片；必须有最近一次 agree；更新会替换原样本 |
+| POST | `/faces/register` | JSON {}；必须有最近一次 agree；仅登记审核通过头像，旧 multipart 中的照片不再作为基准 |
 | GET | `/faces/me` | consent 和 profile 状态，不返回内部 subject_key 或样本 |
 | DELETE | `/faces/me` | 删除样本和停用映射，保留业务审计 |
 
@@ -116,7 +116,7 @@ schedule 字段为 `{date,start,end,location,repeat,interval?,weekdays?,until?}`
 1. GET captcha 保存 Cookie，POST auth/register 注册学生和教师；管理员登录后 GET users，PATCH users/{教师账号ID} 激活。
 2. 管理员 GET teachers/students 获取资料 ID，创建 courses、teaching-classes；添加 enrollments。
 3. 教师登录，为本人班级创建 attendance-tasks。
-4. 学生登录，记录 faces/consent，再上传 faces/register，查询 available 并 check-in。
+4. 学生在网页提交头像并由管理员审核通过；通过安卓入口登录，记录 faces/consent，查询 available 并 check-in（自动登记已审核头像）。
 5. 无人脸条件时，教师使用 manual；已有异常用 review 修正，GET reviews 核对留痕。
 6. 教师 end 后查询 records、reports 或导出 CSV；管理员核对 audit-logs。
 7. POST auth/logout，再用退出前的 Cookie 请求 auth/me 或 auth/refresh，均应为 401。
@@ -129,3 +129,7 @@ schedule 字段为 `{date,start,end,location,repeat,interval?,weekdays?,until?}`
 | GET | `/avatar-images/:id` | 图片所有者账号须为正常状态。所有者和管理员可读待审图片，其他登录用户仅可读该学生当前生效的头像。 |
 
 缺少有效同意字段时返回 400 `CONSENT_REQUIRED`，后端不会请求检测服务。检测不通过返回 422，服务不可用返回 503。`/requests` 中的申请类型为 `avatar_change`，管理员使用现有申请审核接口。批准后可通过 `/auth/me` 获取头像路径。删除学生会清除其头像和待审照片。
+
+## 安卓人脸签到更新
+
+见 [安卓签到联调说明](ANDROID-ATTENDANCE.md)，包含端限制、审核头像自动同步、完整名单及状态处理。
